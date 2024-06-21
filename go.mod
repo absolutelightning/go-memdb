@@ -6,5 +6,4 @@ toolchain go1.22.2
 
 require (
 	github.com/absolutelightning/go-immutable-adaptive-radix v1.0.88
-	github.com/hashicorp/go-uuid v1.0.3
 )
