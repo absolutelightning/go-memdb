@@ -2249,7 +2249,7 @@ func BenchmarkTxnIterator(b *testing.B) {
 			b.Fatalf("err: %v", err)
 		}
 
-		result, err := txn.Get("main", "id")
+		result, err := txn.Get("main", "id", obj.ID)
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
