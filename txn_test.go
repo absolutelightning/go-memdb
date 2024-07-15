@@ -2248,13 +2248,11 @@ func BenchmarkTxnIterator(b *testing.B) {
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
-
 		result, err := txn.Get("main", "id")
 		if err != nil {
 			b.Fatalf("err: %v", err)
 		}
 		for itr := result.Next(); itr != nil; itr = result.Next() {
-
 		}
 	}
 }
