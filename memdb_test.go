@@ -4,7 +4,6 @@
 package memdb
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -99,9 +98,6 @@ func BenchmarkMemDB_Snapshot(b *testing.B) {
 		txn := db.Txn(true)
 		txn.Insert("main", obj)
 		txn.Commit()
+		db.Snapshot()
 	}
-	// Clone the db
-	snap := db.Snapshot()
-	fmt.Println(snap.getRoot(false).Len())
-	fmt.Println(counter)
 }
