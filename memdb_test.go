@@ -4,6 +4,7 @@
 package memdb
 
 import (
+	"strconv"
 	"testing"
 	"time"
 )
@@ -80,5 +81,23 @@ func TestMemDB_Snapshot(t *testing.T) {
 	}
 	if out == nil {
 		t.Fatalf("should exist")
+	}
+}
+
+func BenchmarkMemDB_Snapshot(b *testing.B) {
+	db, err := NewMemDB(testValidSchema())
+	if err != nil {
+		b.Fatalf("err: %v", err)
+	}
+
+	counter := 0
+	for i := 0; i < b.N; i++ {
+		// Add an object
+		counter++
+		obj := testObjWithSuffix(strconv.Itoa(i))
+		txn := db.Txn(true)
+		txn.Insert("main", obj)
+		txn.Commit()
+		db.Snapshot()
 	}
 }

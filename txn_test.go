@@ -6,7 +6,6 @@ package memdb
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -2230,31 +2229,5 @@ func assertNilError(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatalf("expected nil error, got %v", err)
-	}
-}
-func testDBB(b *testing.B) *MemDB {
-	db, _ := NewMemDB(testValidSchema())
-	return db
-}
-
-func BenchmarkTxnInsert(b *testing.B) {
-	db := testDBB(b)
-	txn := db.Txn(true)
-
-	for i := 0; i < b.N; i++ {
-		sti := strconv.Itoa(i)
-		obj := testObjWithSuffix(sti)
-		err := txn.Insert("main", obj)
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
-
-		result, err := txn.Get("main", "id")
-		if err != nil {
-			b.Fatalf("err: %v", err)
-		}
-		for itr := result.Next(); itr != nil; itr = result.Next() {
-
-		}
 	}
 }
