@@ -10,8 +10,8 @@ import (
 func TestMemDB_IsolationNew(t *testing.T) {
 
 	id1 := "object-one"
-	id2 := "object-three"
-	id3 := "object-two"
+	id2 := "object-two"
+	id3 := "object-three"
 
 	setup := func(t *testing.T) *MemDB {
 		t.Helper()
