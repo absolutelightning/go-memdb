@@ -4,6 +4,7 @@
 package memdb
 
 import (
+	"fmt"
 	"testing"
 )
 
@@ -260,6 +261,11 @@ func TestMemDB_IsolationNew(t *testing.T) {
 			t.Fatal("missing expected object 'object-three': read from snapshot should not observe deletes (phantom read)")
 		}
 
+		out = iter.Next()
+		if out != nil {
+			t.Fatal("missing expected object 'object-three': read from snapshot should not observe deletes (phantom read)")
+		}
+
 	})
 
 	t.Run("transaction phantom read", func(t *testing.T) {
@@ -318,6 +324,59 @@ func TestMemDB_IsolationNew(t *testing.T) {
 			t.Fatal("missing expected object 'object-three': read from transaction should not observe deletes (phantom read)")
 		}
 
+		txn4 := db.Txn(true)
+		txn3 := db.Txn(false)
+		iter, err = txn3.Get("main", "id_prefix", "object")
+		out = iter.Next()
+		for out != nil {
+			fmt.Println(out)
+			out = iter.Next()
+		}
+		txn4.Delete("main", obj2)
+
+		obj3 := testObj()
+		obj3.ID = id3
+		txn4.Delete("main", obj3)
+		txn4.Commit()
+		iter, err = txn3.Get("main", "id_prefix", "object")
+		out = iter.Next()
+		for out != nil {
+			fmt.Println(out)
+			out = iter.Next()
+		}
+
+		txn4 = db.Txn(true)
+		txn5 := db.Txn(false)
+		txn4.Insert("main", obj3)
+		txn4.Insert("main", obj2)
+		txn4.Commit()
+		fmt.Println("batman")
+		iter, err = txn5.Get("main", "id_prefix", "object")
+		out = iter.Next()
+		for out != nil {
+			fmt.Println(out)
+			out = iter.Next()
+		}
+		fmt.Println("superman")
+		txn6 := db.Txn(false)
+		iter, err = txn6.Get("main", "id_prefix", "object")
+		out = iter.Next()
+		for out != nil {
+			fmt.Println(out)
+			out = iter.Next()
+		}
+		txn7 := db.Txn(true)
+		txn7.Insert("main", obj3)
+		txn8 := db.Txn(false)
+		obj3.ID = "object-four"
+		txn7.Insert("main", obj3)
+		txn7.Commit()
+		iter, err = txn8.Get("main", "id_prefix", "object")
+		out = iter.Next()
+		for out != nil {
+			fmt.Println(out)
+			out = iter.Next()
+		}
 	})
 
 	t.Run("snapshot commits are unobservable", func(t *testing.T) {
