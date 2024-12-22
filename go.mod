@@ -1,8 +1,11 @@
 module github.com/hashicorp/go-memdb
 
-go 1.13
+go 1.22.4
 
-require (
-	github.com/hashicorp/go-immutable-radix v1.3.1
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
-)
+toolchain go1.23.0
+
+replace github.com/hashicorp/go-immutable-radix => ../go-immutable-radix
+
+require github.com/hashicorp/go-immutable-radix v1.3.1
+
+require github.com/hashicorp/golang-lru v0.5.4 // indirect
