@@ -307,7 +307,7 @@ func (txn *Txn) Insert(table string, obj interface{}) error {
 // When updating an object, the obj provided should be a copy rather
 // than a value updated in-place. Modifying values in-place that are already
 // inserted into MemDB is not supported behavior.
-func (txn *Txn) BulkInsert(table string, obj []interface{}) error {
+func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 	if !txn.write {
 		return fmt.Errorf("cannot insert in read-only transaction")
 	}
@@ -318,111 +318,122 @@ func (txn *Txn) BulkInsert(table string, obj []interface{}) error {
 		return fmt.Errorf("invalid table '%s'", table)
 	}
 
-	// Get the primary ID of the object
-	idSchema := tableSchema.Indexes[id]
-	idIndexer := idSchema.Indexer.(SingleIndexer)
-	ok, idVal, err := idIndexer.FromObject(obj[0])
-	if err != nil {
-		return fmt.Errorf("failed to build primary index: %v", err)
-	}
-	if !ok {
-		return fmt.Errorf("object missing primary index")
-	}
-
-	// Lookup the object by ID first, to see if this is an update
-	idTxn := txn.writableIndex(table, id)
-	existing, update := idTxn.Get(idVal)
-
-	// On an update, there is an existing object with the given
-	// primary ID. We do the update by deleting the current object
-	// and inserting the new object.
 	for name, indexSchema := range tableSchema.Indexes {
+
+		// Get the primary ID of the object
+		idSchema := tableSchema.Indexes[id]
+		idIndexer := idSchema.Indexer.(SingleIndexer)
+
+		// On an update, there is an existing object with the given
 		indexTxn := txn.writableIndex(table, name)
+		// primary ID. We do the update by deleting the current object
+		// and inserting the new object.
 
-		// Determine the new index value
-		var (
-			ok   bool
-			vals [][]byte
-			err  error
-		)
-		switch indexer := indexSchema.Indexer.(type) {
-		case SingleIndexer:
-			var val []byte
-			ok, val, err = indexer.FromObject(obj)
-			vals = [][]byte{val}
-		case MultiIndexer:
-			ok, vals, err = indexer.FromObject(obj)
-		}
-		if err != nil {
-			return fmt.Errorf("failed to build index '%s': %v", name, err)
-		}
+		vals := make([][]byte, 0)
 
-		// Handle non-unique index by computing a unique index.
-		// This is done by appending the primary key which must
-		// be unique anyways.
-		if ok && !indexSchema.Unique {
-			for i := range vals {
-				vals[i] = append(vals[i], idVal...)
+		for _, obj := range objs {
+
+			ok1, idVal, err1 := idIndexer.FromObject(obj)
+			if err1 != nil {
+				return fmt.Errorf("failed to build primary index: %v", err1)
 			}
-		}
+			if !ok1 {
+				return fmt.Errorf("object missing primary index")
+			}
 
-		// Handle the update by deleting from the index first
-		if update {
+			// Lookup the object by ID first, to see if this is an update
+			idTxn := txn.writableIndex(table, id)
+			existing, update := idTxn.Get(idVal)
+
+			// Determine the new index value
 			var (
-				okExist   bool
-				valsExist [][]byte
-				err       error
+				ok  bool
+				err error
 			)
 			switch indexer := indexSchema.Indexer.(type) {
 			case SingleIndexer:
-				var valExist []byte
-				okExist, valExist, err = indexer.FromObject(existing)
-				valsExist = [][]byte{valExist}
+				var val []byte
+				ok, val, err = indexer.FromObject(obj)
+				vals = [][]byte{val}
 			case MultiIndexer:
-				okExist, valsExist, err = indexer.FromObject(existing)
+				ok, vals, err = indexer.FromObject(obj)
 			}
 			if err != nil {
 				return fmt.Errorf("failed to build index '%s': %v", name, err)
 			}
-			if okExist {
-				for i, valExist := range valsExist {
-					// Handle non-unique index by computing a unique index.
-					// This is done by appending the primary key which must
-					// be unique anyways.
-					if !indexSchema.Unique {
-						valExist = append(valExist, idVal...)
-					}
 
-					// If we are writing to the same index with the same value,
-					// we can avoid the delete as the insert will overwrite the
-					// value anyways.
-					if i >= len(vals) || !bytes.Equal(valExist, vals[i]) {
-						indexTxn.Delete(valExist)
+			// Handle non-unique index by computing a unique index.
+			// This is done by appending the primary key which must
+			// be unique anyways.
+			if ok && !indexSchema.Unique {
+				for i := range vals {
+					vals[i] = append(vals[i], idVal...)
+				}
+			}
+
+			// Handle the update by deleting from the index first
+			if update {
+				var (
+					okExist   bool
+					valsExist [][]byte
+					err       error
+				)
+				switch indexer := indexSchema.Indexer.(type) {
+				case SingleIndexer:
+					var valExist []byte
+					okExist, valExist, err = indexer.FromObject(existing)
+					valsExist = [][]byte{valExist}
+				case MultiIndexer:
+					okExist, valsExist, err = indexer.FromObject(existing)
+				}
+				if err != nil {
+					return fmt.Errorf("failed to build index '%s': %v", name, err)
+				}
+				if okExist {
+					for i, valExist := range valsExist {
+						// Handle non-unique index by computing a unique index.
+						// This is done by appending the primary key which must
+						// be unique anyways.
+						if !indexSchema.Unique {
+							valExist = append(valExist, idVal...)
+						}
+
+						// If we are writing to the same index with the same value,
+						// we can avoid the delete as the insert will overwrite the
+						// value anyways.
+						if i >= len(vals) || !bytes.Equal(valExist, vals[i]) {
+							indexTxn.Delete(valExist)
+						}
 					}
 				}
 			}
-		}
 
-		// If there is no index value, either this is an error or an expected
-		// case and we can skip updating
-		if !ok {
-			if indexSchema.AllowMissing {
-				continue
-			} else {
-				return fmt.Errorf("missing value for index '%s'", name)
+			// If there is no index value, either this is an error or an expected
+			// case and we can skip updating
+			if !ok {
+				if indexSchema.AllowMissing {
+					continue
+				} else {
+					return fmt.Errorf("missing value for index '%s'", name)
+				}
+			}
+
+			if txn.changes != nil {
+				txn.changes = append(txn.changes, Change{
+					Table:      table,
+					Before:     existing, // might be nil on a create
+					After:      obj,
+					primaryKey: idVal,
+				})
 			}
 		}
-
-		// Update the value of the index
-		indexTxn.BulkInsert(vals, obj)
-	}
-	if txn.changes != nil {
-		txn.changes = append(txn.changes, Change{
-			Table:      table,
-			Before:     existing, // might be nil on a create
-			After:      obj,
-			primaryKey: idVal,
-		})
+		for i := 0; i < len(vals); i++ {
+			radixKeys := make([][]byte, 0)
+			for j := 0; j < len(objs); j++ {
+				radixKeys = append(radixKeys, vals[i])
+			}
+			indexTxn.BulkInsert(radixKeys, objs)
+		}
 	}
 	return nil
 }
