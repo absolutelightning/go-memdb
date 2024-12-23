@@ -16,7 +16,7 @@ func BenchmarkTxnInsert(b *testing.B) {
 	// Benchmark the insert operation
 	b.ResetTimer()
 	txn := db.Txn(true)
-	for i := 0; i < 1000000; i++ {
+	for i := 0; i < b.N; i++ {
 		obj := testObjWithId(i)
 		// Start a write transaction
 		// Insert an object
@@ -39,7 +39,7 @@ func BenchmarkTxnBulkInsert(b *testing.B) {
 	// Benchmark the insert operation
 	b.ResetTimer()
 	objs := make([]interface{}, 0)
-	for i := 0; i < 1000000; i++ {
+	for i := 0; i < b.N; i++ {
 		obj := testObjWithId(i)
 		objs = append(objs, obj)
 	}
