@@ -6,7 +6,6 @@ package memdb
 import (
 	"bytes"
 	"fmt"
-	"sort"
 	"strings"
 	"sync/atomic"
 	"unsafe"
@@ -271,6 +270,7 @@ func (txn *Txn) Insert(table string, obj interface{}) error {
 					// we can avoid the delete as the insert will overwrite the
 					// value anyways.
 					if i >= len(vals) || !bytes.Equal(valExist, vals[i]) {
+						fmt.Println("deleting ", string(valExist))
 						indexTxn.Delete(valExist)
 					}
 				}
@@ -309,27 +309,22 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 	}
 
 	// Get the table schema
-	tableSchema, okSchema := txn.db.schema.Tables[table]
-	if !okSchema {
+	tableSchema, ok := txn.db.schema.Tables[table]
+	if !ok {
 		return fmt.Errorf("invalid table '%s'", table)
 	}
 
-	indexes := make([]string, 0)
-	for name, _ := range tableSchema.Indexes {
-		indexes = append(indexes, name)
-	}
-	sort.Strings(indexes)
-
-	// On an update, there is an existing object with the given
-	// primary ID. We do the update by deleting the current object
-	for _, index := range indexes {
-		name := index
-		indexSchema := tableSchema.Indexes[index]
-		indexTxn := txn.writableIndex(table, index)
-		idSchema := tableSchema.Indexes[id]
+	idTxn := txn.writableIndex(table, id)
+	idSchema := tableSchema.Indexes[id]
+	for name, indexSchema := range tableSchema.Indexes {
 		var vals [][]byte
+
+		// Get the primary ID of the object
+		indexTxn := txn.writableIndex(table, name)
+		// On an update, there is an existing object with the given
+		// primary ID. We do the update by deleting the current object
+		// and inserting the new object.
 		for _, obj := range objs {
-			// and inserting the new object.
 			idIndexer := idSchema.Indexer.(SingleIndexer)
 			// Get the primary ID of the object
 			ok1, idVal, err1 := idIndexer.FromObject(obj)
@@ -339,8 +334,8 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 			if !ok1 {
 				return fmt.Errorf("object missing primary index")
 			}
+
 			// Lookup the object by ID first, to see if this is an update
-			idTxn := txn.writableIndex(table, id)
 			existing, update := idTxn.Get(idVal)
 
 			// Determine the new index value
@@ -415,8 +410,6 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 					return fmt.Errorf("missing value for index '%s'", name)
 				}
 			}
-
-			// Update the value of the index
 			if txn.changes != nil {
 				txn.changes = append(txn.changes, Change{
 					Table:      table,
