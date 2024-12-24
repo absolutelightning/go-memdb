@@ -45,12 +45,12 @@ func TestTxn_Write_AbortCommit(t *testing.T) {
 	txn.Abort()
 }
 
-func TestTxn_Insert_First(t *testing.T) {
+func TestTxn_BulkInsert_First(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
 	obj := testObj()
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -65,7 +65,7 @@ func TestTxn_Insert_First(t *testing.T) {
 	}
 }
 
-func TestTxn_InsertUpdate_First(t *testing.T) {
+func TestTxn_BulkInsertUpdate_First(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
@@ -74,7 +74,7 @@ func TestTxn_InsertUpdate_First(t *testing.T) {
 		Foo: "abc",
 		Qux: []string{"abc1", "abc2"},
 	}
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -94,7 +94,7 @@ func TestTxn_InsertUpdate_First(t *testing.T) {
 		Foo: "xyz",
 		Qux: []string{"xyz1", "xyz2"},
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -109,7 +109,7 @@ func TestTxn_InsertUpdate_First(t *testing.T) {
 	}
 }
 
-func TestTxn_InsertUpdate_First_NonUnique(t *testing.T) {
+func TestTxn_BulkInsertUpdate_First_NonUnique(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
@@ -118,7 +118,7 @@ func TestTxn_InsertUpdate_First_NonUnique(t *testing.T) {
 		Foo: "abc",
 		Qux: []string{"abc1", "abc2"},
 	}
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestTxn_InsertUpdate_First_NonUnique(t *testing.T) {
 		Foo: "xyz",
 		Qux: []string{"xyz1", "xyz2"},
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -163,7 +163,7 @@ func TestTxn_InsertUpdate_First_NonUnique(t *testing.T) {
 	}
 }
 
-func TestTxn_InsertUpdate_First_MultiIndex(t *testing.T) {
+func TestTxn_BulkInsertUpdate_First_MultiIndex(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
@@ -172,7 +172,7 @@ func TestTxn_InsertUpdate_First_MultiIndex(t *testing.T) {
 		Foo: "abc",
 		Qux: []string{"abc1", "abc2"},
 	}
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -201,7 +201,7 @@ func TestTxn_InsertUpdate_First_MultiIndex(t *testing.T) {
 		Foo: "xyz",
 		Qux: []string{"xyz1", "xyz2"},
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -264,15 +264,15 @@ func TestTxn_First_NonUnique_Multiple(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2"},
 	}
 
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -317,15 +317,15 @@ func TestTxn_First_MultiIndex_Multiple(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2"},
 	}
 
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -370,15 +370,15 @@ func TestTxn_Last_NonUnique_Multiple(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2", "xyz3"},
 	}
 
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -423,15 +423,15 @@ func TestTxn_Last_MultiIndex_Multiple(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2", "zyx1"},
 	}
 
-	err := txn.Insert("main", obj)
+	err := txn.BulkInsert("main", []interface{}{obj})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -455,7 +455,7 @@ func TestTxn_Last_MultiIndex_Multiple(t *testing.T) {
 		t.Fatalf("bad: %#v %#v", raw, obj3)
 	}
 }
-func TestTxn_InsertDelete_Simple(t *testing.T) {
+func TestTxn_BulkInsertDelete_Simple(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
@@ -470,11 +470,11 @@ func TestTxn_InsertDelete_Simple(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2"},
 	}
 
-	err := txn.Insert("main", obj1)
+	err := txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -538,7 +538,7 @@ func TestTxn_InsertDelete_Simple(t *testing.T) {
 	}
 }
 
-func TestTxn_InsertGet_Simple(t *testing.T) {
+func TestTxn_BulkInsertGet_Simple(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
@@ -553,11 +553,11 @@ func TestTxn_InsertGet_Simple(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2"},
 	}
 
-	err := txn.Insert("main", obj1)
+	err := txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -656,7 +656,7 @@ func TestTxn_InsertGet_Simple(t *testing.T) {
 	checkResult(txn)
 }
 
-func TestTxn_InsertGetReverse_Simple(t *testing.T) {
+func TestTxn_BulkInsertGetReverse_Simple(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
@@ -671,11 +671,11 @@ func TestTxn_InsertGetReverse_Simple(t *testing.T) {
 		Qux: []string{"xyz1"},
 	}
 
-	err := txn.Insert("main", obj1)
+	err := txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -794,15 +794,15 @@ func TestTxn_DeleteAll_Simple(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2"},
 	}
 
-	err := txn.Insert("main", obj1)
+	err := txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -852,16 +852,16 @@ func TestTxn_DeleteAll_Simple(t *testing.T) {
 		t.Fatalf("bad: %#v", raw)
 	}
 
-	// Insert some more
-	err = txn.Insert("main", obj1)
+	// BulkInsert some more
+	err = txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -905,15 +905,15 @@ func TestTxn_DeleteAll_Prefix(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2"},
 	}
 
-	err := txn.Insert("main", obj1)
+	err := txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -957,15 +957,15 @@ func TestTxn_DeletePrefix(t *testing.T) {
 		Qux: []string{"xyz1", "xyz2"},
 	}
 
-	err := txn.Insert("main", obj1)
+	err := txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1023,7 +1023,7 @@ func verifyNoResults(t *testing.T, txn *Txn, table string, index string, value s
 	}
 }
 
-func TestTxn_InsertGet_Prefix(t *testing.T) {
+func TestTxn_BulkInsertGet_Prefix(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
@@ -1038,11 +1038,11 @@ func TestTxn_InsertGet_Prefix(t *testing.T) {
 		Qux: []string{"foozipzap"},
 	}
 
-	err := txn.Insert("main", obj1)
+	err := txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1195,7 +1195,7 @@ func (*CustomIndex) PrefixFromArgs(args ...interface{}) ([]byte, error) {
 	return []byte(arg), nil
 }
 
-func TestTxn_InsertGet_LongestPrefix(t *testing.T) {
+func TestTxn_BulkInsertGet_LongestPrefix(t *testing.T) {
 	schema := &DBSchema{
 		Tables: map[string]*TableSchema{
 			"main": &TableSchema{
@@ -1242,15 +1242,15 @@ func TestTxn_InsertGet_LongestPrefix(t *testing.T) {
 		Foo: "",
 	}
 
-	err = txn.Insert("main", obj1)
+	err = txn.BulkInsert("main", []interface{}{obj1})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj2)
+	err = txn.BulkInsert("main", []interface{}{obj2})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
-	err = txn.Insert("main", obj3)
+	err = txn.BulkInsert("main", []interface{}{obj3})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1444,9 +1444,9 @@ func TestTxn_LowerBound(t *testing.T) {
 			txn := db.Txn(true)
 			for _, row := range tc.Rows {
 
-				err := txn.Insert("main", row)
+				err := txn.BulkInsert("main", []interface{}{row})
 				if err != nil {
-					t.Fatalf("err inserting: %s", err)
+					t.Fatalf("err BulkInserting: %s", err)
 				}
 			}
 			txn.Commit()
@@ -1537,9 +1537,9 @@ func TestTxn_ReverseLowerBound(t *testing.T) {
 			txn := db.Txn(true)
 			for _, row := range tc.Rows {
 
-				err := txn.Insert("main", row)
+				err := txn.BulkInsert("main", []interface{}{row})
 				if err != nil {
-					t.Fatalf("err inserting: %s", err)
+					t.Fatalf("err BulkInserting: %s", err)
 				}
 			}
 			txn.Commit()
@@ -1568,22 +1568,22 @@ func TestTxn_Snapshot(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
 
-	err := txn.Insert("main", &TestObject{
+	err := txn.BulkInsert("main", []interface{}{&TestObject{
 		ID:  "one",
 		Foo: "abc",
 		Qux: []string{"abc1", "abc2"},
-	})
+	}})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
 
 	snapshot := txn.Snapshot()
 
-	err = txn.Insert("main", &TestObject{
+	err = txn.BulkInsert("main", []interface{}{&TestObject{
 		ID:  "two",
 		Foo: "def",
 		Qux: []string{"def1", "def2"},
-	})
+	}})
 	if err != nil {
 		t.Fatalf("err: %v", err)
 	}
@@ -1670,12 +1670,12 @@ func TestStringFieldIndexerEmptyPointerFromArgs(t *testing.T) {
 			Fu: nil,
 		}
 
-		err = txn.Insert("main", obj1)
+		err = txn.BulkInsert("main", []interface{}{obj1})
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 
-		err = txn.Insert("main", obj2)
+		err = txn.BulkInsert("main", []interface{}{obj2})
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
@@ -1724,12 +1724,12 @@ func TestStringFieldIndexerEmptyPointerFromArgs(t *testing.T) {
 			Fu: nil,
 		}
 
-		err = txn.Insert("main", obj1)
+		err = txn.BulkInsert("main", []interface{}{obj1})
 		if err != nil {
 			t.Fatalf("err: %v", err)
 		}
 
-		err = txn.Insert("main", obj2)
+		err = txn.BulkInsert("main", []interface{}{obj2})
 		if err == nil {
 			t.Fatalf("expected err not to be nil")
 		}
@@ -1813,15 +1813,15 @@ func TestTxn_Changes(t *testing.T) {
 			OneRows:         nil,
 			TwoRows:         nil,
 			Mutate: func(t *testing.T, tx *Txn) {
-				err := tx.Insert("one", basicRows[0])
+				err := tx.BulkInsert("one", []interface{}{basicRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
-				err = tx.Insert("one", basicRows[1])
+				err = tx.BulkInsert("one", []interface{}{basicRows[1]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
-				err = tx.Insert("two", basicRows[2])
+				err = tx.BulkInsert("two", []interface{}{basicRows[2]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
@@ -1829,20 +1829,20 @@ func TestTxn_Changes(t *testing.T) {
 			WantChanges: nil,
 		},
 		{
-			Name:            "tracking enabled, basic inserts",
+			Name:            "tracking enabled, basic BulkInserts",
 			TrackingEnabled: true,
 			OneRows:         nil,
 			TwoRows:         nil,
 			Mutate: func(t *testing.T, tx *Txn) {
-				err := tx.Insert("one", basicRows[0])
+				err := tx.BulkInsert("one", []interface{}{basicRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
-				err = tx.Insert("one", basicRows[1])
+				err = tx.BulkInsert("one", []interface{}{basicRows[1]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
-				err = tx.Insert("two", basicRows[2])
+				err = tx.BulkInsert("two", []interface{}{basicRows[2]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
@@ -1871,15 +1871,15 @@ func TestTxn_Changes(t *testing.T) {
 			OneRows:         nil,
 			TwoRows:         nil,
 			Mutate: func(t *testing.T, tx *Txn) {
-				err := tx.Insert("one", basicRows[0])
+				err := tx.BulkInsert("one", []interface{}{basicRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
-				err = tx.Insert("one", basicRows[1])
+				err = tx.BulkInsert("one", []interface{}{basicRows[1]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
-				err = tx.Insert("two", basicRows[2])
+				err = tx.BulkInsert("two", []interface{}{basicRows[2]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
@@ -1888,18 +1888,18 @@ func TestTxn_Changes(t *testing.T) {
 			WantChanges: nil,
 		},
 		{
-			Name:            "mixed insert, update, delete",
+			Name:            "mixed BulkInsert, update, delete",
 			TrackingEnabled: true,
 			OneRows:         []TestObject{basicRows[0]},
 			TwoRows:         []TestObject{basicRows[2]},
 			Mutate: func(t *testing.T, tx *Txn) {
-				// Insert a new row
-				err := tx.Insert("one", basicRows[1])
+				// BulkInsert a new row
+				err := tx.BulkInsert("one", []interface{}{basicRows[1]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
 				// Update an existing row
-				err = tx.Insert("one", mutatedRows[0])
+				err = tx.BulkInsert("one", []interface{}{mutatedRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
@@ -1933,18 +1933,18 @@ func TestTxn_Changes(t *testing.T) {
 			OneRows:         []TestObject{},
 			TwoRows:         []TestObject{},
 			Mutate: func(t *testing.T, tx *Txn) {
-				// Insert a new row
-				err := tx.Insert("one", basicRows[0])
+				// BulkInsert a new row
+				err := tx.BulkInsert("one", []interface{}{basicRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
 				// Mutate same row again
-				err = tx.Insert("one", mutatedRows[0])
+				err = tx.BulkInsert("one", []interface{}{mutatedRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
 				// Mutate same row again
-				err = tx.Insert("one", mutated2Rows[0])
+				err = tx.BulkInsert("one", []interface{}{mutated2Rows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
@@ -1966,7 +1966,7 @@ func TestTxn_Changes(t *testing.T) {
 			TwoRows:         []TestObject{},
 			Mutate: func(t *testing.T, tx *Txn) {
 				// Update a new row
-				err := tx.Insert("one", mutatedRows[0])
+				err := tx.BulkInsert("one", []interface{}{mutatedRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
@@ -2093,11 +2093,11 @@ func TestTxn_Changes(t *testing.T) {
 			},
 		},
 		{
-			Name:            "insert and then delete same item in one txn",
+			Name:            "BulkInsert and then delete same item in one txn",
 			TrackingEnabled: true,
 			Mutate: func(t *testing.T, tx *Txn) {
-				// Insert a new row
-				err := tx.Insert("one", basicRows[0])
+				// BulkInsert a new row
+				err := tx.BulkInsert("one", []interface{}{basicRows[0]})
 				if err != nil {
 					t.Fatalf("Err: %s", err)
 				}
@@ -2123,18 +2123,18 @@ func TestTxn_Changes(t *testing.T) {
 				t.Fatalf("Failed to create DB: %s", err)
 			}
 
-			// Insert initial rows
+			// BulkInsert initial rows
 			tx := db.Txn(true)
 			for i, r := range tc.OneRows {
-				err = tx.Insert("one", r)
+				err = tx.BulkInsert("one", []interface{}{r})
 				if err != nil {
-					t.Fatalf("Failed to insert OneRows[%d]: %s", i, err)
+					t.Fatalf("Failed to BulkInsert OneRows[%d]: %s", i, err)
 				}
 			}
 			for i, r := range tc.TwoRows {
-				err = tx.Insert("two", r)
+				err = tx.BulkInsert("two", []interface{}{r})
 				if err != nil {
-					t.Fatalf("Failed to insert TwoRows[%d]: %s", i, err)
+					t.Fatalf("Failed to BulkInsert TwoRows[%d]: %s", i, err)
 				}
 			}
 			tx.Commit()
@@ -2206,9 +2206,9 @@ func TestTxn_GetIterAndDelete(t *testing.T) {
 
 	key := "aaaa"
 	txn := db.Txn(true)
-	assertNilError(t, txn.Insert("main", &TestObject{ID: "1", Foo: key}))
-	assertNilError(t, txn.Insert("main", &TestObject{ID: "123", Foo: key}))
-	assertNilError(t, txn.Insert("main", &TestObject{ID: "2", Foo: key}))
+	assertNilError(t, txn.BulkInsert("main", []interface{}{&TestObject{ID: "1", Foo: key}}))
+	assertNilError(t, txn.BulkInsert("main", []interface{}{&TestObject{ID: "123", Foo: key}}))
+	assertNilError(t, txn.BulkInsert("main", []interface{}{&TestObject{ID: "2", Foo: key}}))
 	txn.Commit()
 
 	txn = db.Txn(true)
