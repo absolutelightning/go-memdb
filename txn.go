@@ -324,10 +324,10 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 	// primary ID. We do the update by deleting the current object
 	for _, index := range indexes {
 		name := index
-		bulkInsertData := make(map[string][]interface{})
 		indexSchema := tableSchema.Indexes[index]
 		indexTxn := txn.writableIndex(table, index)
 		idSchema := tableSchema.Indexes[id]
+		var vals [][]byte
 		for _, obj := range objs {
 			// and inserting the new object.
 			idIndexer := idSchema.Indexer.(SingleIndexer)
@@ -345,9 +345,8 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 
 			// Determine the new index value
 			var (
-				ok   bool
-				vals [][]byte
-				err  error
+				ok  bool
+				err error
 			)
 			switch indexer := indexSchema.Indexer.(type) {
 			case SingleIndexer:
@@ -418,13 +417,6 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 			}
 
 			// Update the value of the index
-			for _, val := range vals {
-				if _, hasVal := bulkInsertData[string(val)]; !hasVal {
-					bulkInsertData[string(val)] = make([]interface{}, 0)
-				}
-				bulkInsertData[string(val)] = append(bulkInsertData[string(val)], obj)
-			}
-
 			if txn.changes != nil {
 				txn.changes = append(txn.changes, Change{
 					Table:      table,
@@ -437,9 +429,9 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 
 		radixKeys := make([][]byte, 0)
 		radixValues := make([]interface{}, 0)
-		for val, objsData := range bulkInsertData {
-			for _, obj := range objsData {
-				radixKeys = append(radixKeys, []byte(val))
+		for _, val := range vals {
+			for _, obj := range objs {
+				radixKeys = append(radixKeys, val)
 				radixValues = append(radixValues, obj)
 			}
 		}
