@@ -6,6 +6,7 @@ package memdb
 import (
 	"bytes"
 	"fmt"
+	"sort"
 	"strings"
 	"sync/atomic"
 	"unsafe"
@@ -308,20 +309,28 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 	}
 
 	// Get the table schema
-	tableSchema, ok := txn.db.schema.Tables[table]
-	if !ok {
+	tableSchema, okSchema := txn.db.schema.Tables[table]
+	if !okSchema {
 		return fmt.Errorf("invalid table '%s'", table)
 	}
 
+	indexes := make([]string, 0)
+	for name, _ := range tableSchema.Indexes {
+		indexes = append(indexes, name)
+	}
+	sort.Strings(indexes)
+
 	// On an update, there is an existing object with the given
 	// primary ID. We do the update by deleting the current object
-	// and inserting the new object.
-	for name, indexSchema := range tableSchema.Indexes {
+	for _, index := range indexes {
+		name := index
 		bulkInsertData := make(map[string][]interface{})
+		indexSchema := tableSchema.Indexes[index]
+		indexTxn := txn.writableIndex(table, index)
 		idSchema := tableSchema.Indexes[id]
-		idIndexer := idSchema.Indexer.(SingleIndexer)
-		indexTxn := txn.writableIndex(table, name)
 		for _, obj := range objs {
+			// and inserting the new object.
+			idIndexer := idSchema.Indexer.(SingleIndexer)
 			// Get the primary ID of the object
 			ok1, idVal, err1 := idIndexer.FromObject(obj)
 			if err1 != nil {
