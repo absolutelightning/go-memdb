@@ -270,7 +270,6 @@ func (txn *Txn) Insert(table string, obj interface{}) error {
 					// we can avoid the delete as the insert will overwrite the
 					// value anyways.
 					if i >= len(vals) || !bytes.Equal(valExist, vals[i]) {
-						fmt.Println("deleting ", string(valExist))
 						indexTxn.Delete(valExist)
 					}
 				}
@@ -316,7 +315,22 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 
 	idTxn := txn.writableIndex(table, id)
 	idSchema := tableSchema.Indexes[id]
-	for name, indexSchema := range tableSchema.Indexes {
+
+	indexes := make([]string, 0, len(tableSchema.Indexes))
+
+	for name, _ := range tableSchema.Indexes {
+		if name == id {
+			continue
+		}
+		indexes = append(indexes, name)
+	}
+
+	indexes = append(indexes, id)
+
+	for _, index := range indexes {
+
+		name := index
+		indexSchema := tableSchema.Indexes[index]
 		var vals [][]byte
 
 		// Get the primary ID of the object
@@ -324,8 +338,8 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 		// On an update, there is an existing object with the given
 		// primary ID. We do the update by deleting the current object
 		// and inserting the new object.
+		idIndexer := idSchema.Indexer.(SingleIndexer)
 		for _, obj := range objs {
-			idIndexer := idSchema.Indexer.(SingleIndexer)
 			// Get the primary ID of the object
 			ok1, idVal, err1 := idIndexer.FromObject(obj)
 			if err1 != nil {
