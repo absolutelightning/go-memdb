@@ -302,11 +302,6 @@ func (txn *Txn) Insert(table string, obj interface{}) error {
 	return nil
 }
 
-// BulkInsert is used to add or update an object into the given table.
-//
-// When updating an object, the obj provided should be a copy rather
-// than a value updated in-place. Modifying values in-place that are already
-// inserted into MemDB is not supported behavior.
 func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 	if !txn.write {
 		return fmt.Errorf("cannot insert in read-only transaction")
@@ -318,21 +313,16 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 		return fmt.Errorf("invalid table '%s'", table)
 	}
 
+	// On an update, there is an existing object with the given
+	// primary ID. We do the update by deleting the current object
+	// and inserting the new object.
 	for name, indexSchema := range tableSchema.Indexes {
-
-		// Get the primary ID of the object
+		bulkInsertData := make(map[string][]interface{})
 		idSchema := tableSchema.Indexes[id]
 		idIndexer := idSchema.Indexer.(SingleIndexer)
-
-		// On an update, there is an existing object with the given
 		indexTxn := txn.writableIndex(table, name)
-		// primary ID. We do the update by deleting the current object
-		// and inserting the new object.
-
-		vals := make([][]byte, 0)
-
 		for _, obj := range objs {
-
+			// Get the primary ID of the object
 			ok1, idVal, err1 := idIndexer.FromObject(obj)
 			if err1 != nil {
 				return fmt.Errorf("failed to build primary index: %v", err1)
@@ -340,15 +330,15 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 			if !ok1 {
 				return fmt.Errorf("object missing primary index")
 			}
-
 			// Lookup the object by ID first, to see if this is an update
 			idTxn := txn.writableIndex(table, id)
 			existing, update := idTxn.Get(idVal)
 
 			// Determine the new index value
 			var (
-				ok  bool
-				err error
+				ok   bool
+				vals [][]byte
+				err  error
 			)
 			switch indexer := indexSchema.Indexer.(type) {
 			case SingleIndexer:
@@ -418,6 +408,14 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 				}
 			}
 
+			// Update the value of the index
+			for _, val := range vals {
+				if _, hasVal := bulkInsertData[string(val)]; !hasVal {
+					bulkInsertData[string(val)] = make([]interface{}, 0)
+				}
+				bulkInsertData[string(val)] = append(bulkInsertData[string(val)], obj)
+			}
+
 			if txn.changes != nil {
 				txn.changes = append(txn.changes, Change{
 					Table:      table,
@@ -427,13 +425,16 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 				})
 			}
 		}
-		for i := 0; i < len(vals); i++ {
-			radixKeys := make([][]byte, 0)
-			for j := 0; j < len(objs); j++ {
-				radixKeys = append(radixKeys, vals[i])
+
+		radixKeys := make([][]byte, 0)
+		radixValues := make([]interface{}, 0)
+		for val, objsData := range bulkInsertData {
+			for _, obj := range objsData {
+				radixKeys = append(radixKeys, []byte(val))
+				radixValues = append(radixValues, obj)
 			}
-			indexTxn.BulkInsert(radixKeys, objs)
 		}
+		indexTxn.BulkInsert(radixKeys, radixValues)
 	}
 	return nil
 }
