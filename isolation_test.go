@@ -31,11 +31,11 @@ func TestMemDB_Isolation(t *testing.T) {
 		obj1a := testObj()
 		obj1a.ID = id1
 		txn := db.Txn(true)
-		mustNoError(t, txn.Insert("main", obj1a))
+		mustNoError(t, txn.BulkInsert("main", []interface{}{obj1a}))
 
 		obj3 := testObj()
 		obj3.ID = id3
-		mustNoError(t, txn.Insert("main", obj3))
+		mustNoError(t, txn.BulkInsert("main", []interface{}{obj3}))
 		txn.Commit()
 		return db
 	}
@@ -49,12 +49,12 @@ func TestMemDB_Isolation(t *testing.T) {
 		obj1b.ID = id1
 		txn1 := db.Txn(true)
 		obj1b.Baz = "nope"
-		mustNoError(t, txn1.Insert("main", obj1b))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj1b}))
 
 		// Insert an object
 		obj2 := testObj()
 		obj2.ID = id2
-		mustNoError(t, txn1.Insert("main", obj2))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj2}))
 
 		txn2 := db2.Txn(false)
 		out, err := txn2.First("main", "id", id1)
@@ -93,12 +93,12 @@ func TestMemDB_Isolation(t *testing.T) {
 		obj1b.ID = id1
 		txn1 := db.Txn(true)
 		obj1b.Baz = "nope"
-		mustNoError(t, txn1.Insert("main", obj1b))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj1b}))
 
 		// Insert an object
 		obj2 := testObj()
 		obj2.ID = id2
-		mustNoError(t, txn1.Insert("main", obj2))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj2}))
 
 		txn2 := db.Txn(false)
 		out, err := txn2.First("main", "id", id1)
@@ -126,12 +126,12 @@ func TestMemDB_Isolation(t *testing.T) {
 		obj1b.ID = id1
 		txn1 := db.Txn(true)
 		obj1b.Baz = "nope"
-		mustNoError(t, txn1.Insert("main", obj1b))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj1b}))
 
 		// Insert an object
 		obj2 := testObj()
 		obj2.ID = id3
-		mustNoError(t, txn1.Insert("main", obj2))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj2}))
 
 		// Commit
 		txn1.Commit()
@@ -162,12 +162,12 @@ func TestMemDB_Isolation(t *testing.T) {
 		obj1b.ID = id1
 		txn1 := db.Txn(true)
 		obj1b.Baz = "nope"
-		mustNoError(t, txn1.Insert("main", obj1b))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj1b}))
 
 		// Insert an object
 		obj2 := testObj()
 		obj2.ID = id3
-		mustNoError(t, txn1.Insert("main", obj2))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj2}))
 
 		txn2 := db.Txn(false)
 
@@ -207,7 +207,7 @@ func TestMemDB_Isolation(t *testing.T) {
 		txn1 := db.Txn(true)
 		obj2 := testObj()
 		obj2.ID = id2
-		mustNoError(t, txn1.Insert("main", obj2))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj2}))
 		txn1.Commit()
 
 		out = iter.Next()
@@ -259,7 +259,7 @@ func TestMemDB_Isolation(t *testing.T) {
 		txn1 := db.Txn(true)
 		obj2 := testObj()
 		obj2.ID = id2
-		mustNoError(t, txn1.Insert("main", obj2))
+		mustNoError(t, txn1.BulkInsert("main", []interface{}{obj2}))
 		txn1.Commit()
 
 		out = iter.Next()
@@ -306,7 +306,7 @@ func TestMemDB_Isolation(t *testing.T) {
 		obj1 := testObj()
 		obj1.ID = id1
 		obj1.Baz = "also"
-		mustNoError(t, txn2.Insert("main", obj1))
+		mustNoError(t, txn2.BulkInsert("main", []interface{}{obj1}))
 		txn2.Commit()
 
 		txn1 := db.Txn(false)
