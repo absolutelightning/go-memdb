@@ -8,4 +8,4 @@ replace github.com/hashicorp/go-immutable-radix => ../go-immutable-radix
 
 require github.com/hashicorp/go-immutable-radix v1.3.1
 
-require github.com/hashicorp/golang-lru v0.5.4 // indirect
+require github.com/hashicorp/golang-lru v0.5.0 // indirect
