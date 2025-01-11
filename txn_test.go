@@ -1888,7 +1888,7 @@ func TestTxn_Changes(t *testing.T) {
 			WantChanges: nil,
 		},
 		{
-			Name:            "mixed Insert, update, delete",
+			Name:            "mixed insert, update, delete",
 			TrackingEnabled: true,
 			OneRows:         []TestObject{basicRows[0]},
 			TwoRows:         []TestObject{basicRows[2]},
@@ -2093,7 +2093,7 @@ func TestTxn_Changes(t *testing.T) {
 			},
 		},
 		{
-			Name:            "Insert and then delete same item in one txn",
+			Name:            "insert and then delete same item in one txn",
 			TrackingEnabled: true,
 			Mutate: func(t *testing.T, tx *Txn) {
 				// Insert a new row
