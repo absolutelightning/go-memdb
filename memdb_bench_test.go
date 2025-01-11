@@ -5,11 +5,6 @@ import (
 )
 
 func benchmarkTxnInsert(b *testing.B, batchSize int) {
-	db, err := NewMemDB(testValidSchema())
-	if err != nil {
-		b.Fatalf("err: %v", err)
-	}
-
 	objects := make([]interface{}, b.N*batchSize)
 	for i := 0; i < b.N*batchSize; i++ {
 		objects[i] = testObjWithId(i) // Ensure valid objects
@@ -17,6 +12,11 @@ func benchmarkTxnInsert(b *testing.B, batchSize int) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
+		db, err := NewMemDB(testValidSchema())
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
+
 		txn := db.Txn(true)
 		start := i * batchSize
 		for j := 0; j < batchSize; j++ {
