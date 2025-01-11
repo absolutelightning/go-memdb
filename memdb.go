@@ -98,6 +98,26 @@ func (db *MemDB) Snapshot() *MemDB {
 	return clone
 }
 
+// NewMemDB creates a new MemDB with the given schema.
+func NewMemDBWithData(schema *DBSchema, data map[string][]interface{}) (*MemDB, error) {
+	// Validate the schema
+	if err := schema.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Create the MemDB
+	db := &MemDB{
+		schema:  schema,
+		root:    unsafe.Pointer(iradix.New()),
+		primary: true,
+	}
+	if err := db.initializeWithObjects(data); err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
 // initialize is used to setup the DB for use after creation. This should
 // be called only once after allocating a MemDB.
 func (db *MemDB) initialize() error {
@@ -124,6 +144,7 @@ func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error
 			root, _, _ = root.Insert(path, index)
 		}
 	}
+	db.root = unsafe.Pointer(root)
 	txn := db.Txn(true)
 	for tName, data := range tableData {
 		err := txn.initializeWithData(tName, data)
@@ -132,7 +153,6 @@ func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error
 		}
 	}
 	txn.Commit()
-	db.root = unsafe.Pointer(root)
 	return nil
 }
 

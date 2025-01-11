@@ -302,7 +302,7 @@ func (txn *Txn) Insert(table string, obj interface{}) error {
 	return nil
 }
 
-// BulkInsert This is a helper function to insert a batch of objects into the given table.
+// InitializeWithData This is a helper function to insert a batch of objects into the given table.
 // This should only be used for initializing MemDB with a large number of objects.
 // DB should be empty before calling this function.
 func (txn *Txn) initializeWithData(table string, objs []interface{}) error {
