@@ -113,6 +113,29 @@ func (db *MemDB) initialize() error {
 	return nil
 }
 
+// initialize with data is used to setup the DB for use after creation. This should
+// be called only once after allocating a MemDB.
+func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error {
+	root := db.getRoot()
+	for tName, tableSchema := range db.schema.Tables {
+		for iName := range tableSchema.Indexes {
+			index := iradix.New()
+			path := indexPath(tName, iName)
+			root, _, _ = root.Insert(path, index)
+		}
+	}
+	txn := db.Txn(true)
+	for tName, data := range tableData {
+		err := txn.initializeWithData(tName, data)
+		if err != nil {
+			return err
+		}
+	}
+	txn.Commit()
+	db.root = unsafe.Pointer(root)
+	return nil
+}
+
 // indexPath returns the path from the root to the given table index
 func indexPath(table, index string) []byte {
 	return []byte(table + "." + index)

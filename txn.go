@@ -302,7 +302,10 @@ func (txn *Txn) Insert(table string, obj interface{}) error {
 	return nil
 }
 
-func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
+// BulkInsert This is a helper function to insert a batch of objects into the given table.
+// This should only be used for initializing MemDB with a large number of objects.
+// DB should be empty before calling this function.
+func (txn *Txn) initializeWithData(table string, objs []interface{}) error {
 	if !txn.write {
 		return fmt.Errorf("cannot insert in read-only transaction")
 	}
@@ -335,6 +338,7 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 
 		// Get the primary ID of the object
 		indexTxn := txn.writableIndex(table, name)
+		indexTxn.TrackMutate(false)
 		// On an update, there is an existing object with the given
 		// primary ID. We do the update by deleting the current object
 		// and inserting the new object.
@@ -442,7 +446,7 @@ func (txn *Txn) BulkInsert(table string, objs []interface{}) error {
 				radixValues = append(radixValues, obj)
 			}
 		}
-		indexTxn.BulkInsert(radixKeys, radixValues)
+		indexTxn.InitializeWithData(radixKeys, radixValues)
 	}
 	return nil
 }

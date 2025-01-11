@@ -1,7 +1,6 @@
 package memdb
 
 import (
-	"strconv"
 	"testing"
 )
 
@@ -52,32 +51,4 @@ func BenchmarkTxnBulkInsert(b *testing.B) {
 	}
 	// Commit the transaction
 	txn.Commit()
-}
-
-// Benchmark for read operations
-func BenchmarkTxnRead(b *testing.B) {
-	// Prepopulate the database with data
-	db, err := NewMemDB(testValidSchema())
-	if err != nil {
-		b.Fatalf("err: %v", err)
-	}
-	txn := db.Txn(true)
-	for i := 0; i < 10000; i++ {
-		obj := testObjWithId(i)
-		err := txn.Insert("main", obj)
-		if err != nil {
-			b.Fatalf("insert failed: %v", err)
-		}
-	}
-	txn.Commit()
-
-	// Benchmark the read operation
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		txn := db.Txn(false) // Read-only transaction
-		_, err := txn.Get("main", "id", strconv.Itoa(i%10000))
-		if err != nil {
-			b.Fatalf("read failed: %v", err)
-		}
-	}
 }
