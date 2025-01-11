@@ -95,3 +95,11 @@ func Benchmark1000000TxnInsert(b *testing.B) {
 func Benchmark1000000TxnBulkInsert(b *testing.B) {
 	benchmarkTxnBulkInsert(b, 1000000)
 }
+
+func Benchmark10000000TxnInsert(b *testing.B) {
+	benchmarkTxnInsert(b, 10000000)
+}
+
+func Benchmark10000000TxnBulkInsert(b *testing.B) {
+	benchmarkTxnBulkInsert(b, 10000000)
+}
