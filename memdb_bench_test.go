@@ -37,11 +37,13 @@ func benchmarkTxnBulkInsert(b *testing.B, batchSize int) {
 		objects[i] = obj
 	}
 	b.ResetTimer()
-	data := make(map[string][]interface{})
-	data["main"] = objects
-	_, err := NewMemDBWithData(testValidSchema(), data)
-	if err != nil {
-		b.Fatalf("err: %v", err)
+	for i := 0; i < b.N; i++ {
+		data := make(map[string][]interface{})
+		data["main"] = objects[i*batchSize : (i+1)*batchSize]
+		_, err := NewMemDBWithData(testValidSchema(), data)
+		if err != nil {
+			b.Fatalf("err: %v", err)
+		}
 	}
 }
 
