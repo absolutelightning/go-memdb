@@ -1446,7 +1446,7 @@ func TestTxn_LowerBound(t *testing.T) {
 
 				err := txn.Insert("main", row)
 				if err != nil {
-					t.Fatalf("err Inserting: %s", err)
+					t.Fatalf("err inserting: %s", err)
 				}
 			}
 			txn.Commit()
@@ -1539,7 +1539,7 @@ func TestTxn_ReverseLowerBound(t *testing.T) {
 
 				err := txn.Insert("main", row)
 				if err != nil {
-					t.Fatalf("err Inserting: %s", err)
+					t.Fatalf("err inserting: %s", err)
 				}
 			}
 			txn.Commit()
@@ -1829,7 +1829,7 @@ func TestTxn_Changes(t *testing.T) {
 			WantChanges: nil,
 		},
 		{
-			Name:            "tracking enabled, basic Inserts",
+			Name:            "tracking enabled, basic inserts",
 			TrackingEnabled: true,
 			OneRows:         nil,
 			TwoRows:         nil,
@@ -2128,13 +2128,13 @@ func TestTxn_Changes(t *testing.T) {
 			for i, r := range tc.OneRows {
 				err = tx.Insert("one", r)
 				if err != nil {
-					t.Fatalf("Failed to Insert OneRows[%d]: %s", i, err)
+					t.Fatalf("Failed to insert OneRows[%d]: %s", i, err)
 				}
 			}
 			for i, r := range tc.TwoRows {
 				err = tx.Insert("two", r)
 				if err != nil {
-					t.Fatalf("Failed to Insert TwoRows[%d]: %s", i, err)
+					t.Fatalf("Failed to insert TwoRows[%d]: %s", i, err)
 				}
 			}
 			tx.Commit()
