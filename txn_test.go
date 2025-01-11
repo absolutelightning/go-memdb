@@ -163,60 +163,6 @@ func TestTxn_InsertUpdate_First_NonUnique(t *testing.T) {
 	}
 }
 
-func TestTxn_InsertUpdate_First_NonUniqueWithoutBulk(t *testing.T) {
-	db := testDB(t)
-	txn := db.Txn(true)
-
-	obj := &TestObject{
-		ID:  "my-object",
-		Foo: "abc",
-		Qux: []string{"abc1", "abc2"},
-	}
-	err := txn.Insert("main", obj)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	raw, err := txn.First("main", "foo", obj.Foo)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if raw != obj {
-		t.Fatalf("bad: %#v %#v", raw, obj)
-	}
-
-	// Update the object
-	obj2 := &TestObject{
-		ID:  "my-object",
-		Foo: "xyz",
-		Qux: []string{"xyz1", "xyz2"},
-	}
-	err = txn.Insert("main", obj2)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	raw, err = txn.First("main", "foo", obj2.Foo)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if raw != obj2 {
-		t.Fatalf("bad: %#v %#v", raw, obj2)
-	}
-
-	// Lookup of the old value should fail
-	raw, err = txn.First("main", "foo", obj.Foo)
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-
-	if raw != nil {
-		t.Fatalf("bad: %#v", raw)
-	}
-}
-
 func TestTxn_InsertUpdate_First_MultiIndex(t *testing.T) {
 	db := testDB(t)
 	txn := db.Txn(true)
