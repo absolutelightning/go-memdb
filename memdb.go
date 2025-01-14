@@ -205,8 +205,8 @@ func getTableData(db *MemDB, tName, index string, objs []interface{}) ([][]byte,
 // be called only once after allocating a MemDB.
 func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error {
 	root := db.getRoot()
-	for tName, tableSchema := range db.schema.Tables {
-		for iName := range tableSchema.Indexes {
+	for tName, _ := range tableData {
+		for iName := range db.schema.Tables[tName].Indexes {
 			keys, vals, err := getTableData(db, tName, iName, tableData[tName])
 			if err != nil {
 				return err
