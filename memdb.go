@@ -6,6 +6,7 @@
 package memdb
 
 import (
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -114,7 +115,6 @@ func NewMemDBWithData(schema *DBSchema, data map[string][]interface{}) (*MemDB, 
 	if err := db.initializeWithObjects(data); err != nil {
 		return nil, err
 	}
-
 	return db, nil
 }
 
@@ -133,26 +133,90 @@ func (db *MemDB) initialize() error {
 	return nil
 }
 
+func getTableData(db *MemDB, tName, index string, objs []interface{}) ([][]byte, []interface{}, error) {
+	// Get the table schema
+	tableSchema, ok := db.schema.Tables[tName]
+	if !ok {
+		panic("table not found")
+	}
+
+	idSchema := tableSchema.Indexes[id]
+	indexSchema := tableSchema.Indexes[index]
+	radixKeys := make([][]byte, 0)
+	radixValues := make([]interface{}, 0)
+	idIndexer := idSchema.Indexer.(SingleIndexer)
+	for _, obj := range objs {
+		// Get the primary ID of the object
+		ok1, idVal, err1 := idIndexer.FromObject(obj)
+		if err1 != nil {
+			return nil, nil, fmt.Errorf("failed to build primary index: %v", err1)
+		}
+		if !ok1 {
+			return nil, nil, fmt.Errorf("object missing primary index")
+		}
+
+		// Determine the new index value
+		var (
+			ok   bool
+			err  error
+			vals [][]byte
+		)
+		switch indexer := indexSchema.Indexer.(type) {
+		case SingleIndexer:
+			var val []byte
+			ok, val, err = indexer.FromObject(obj)
+			vals = [][]byte{val}
+		case MultiIndexer:
+			ok, vals, err = indexer.FromObject(obj)
+		}
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build index '%s': %v", index, err)
+		}
+
+		// Handle non-unique index by computing a unique index.
+		// This is done by appending the primary key which must
+		// be unique anyways.
+		if ok && !indexSchema.Unique {
+			for i := range vals {
+				vals[i] = append(vals[i], idVal...)
+			}
+		}
+
+		// If there is no index value, either this is an error or an expected
+		// case and we can skip updating
+		if !ok {
+			if indexSchema.AllowMissing {
+				continue
+			} else {
+				return nil, nil, fmt.Errorf("missing value for index '%s'", index)
+			}
+		}
+
+		for _, val := range vals {
+			radixKeys = append(radixKeys, val)
+			radixValues = append(radixValues, obj)
+		}
+	}
+
+	return radixKeys, radixValues, nil
+}
+
 // initialize with data is used to setup the DB for use after creation. This should
 // be called only once after allocating a MemDB.
 func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error {
 	root := db.getRoot()
 	for tName, tableSchema := range db.schema.Tables {
 		for iName := range tableSchema.Indexes {
-			index := iradix.New()
+			keys, vals, err := getTableData(db, tName, iName, tableData[tName])
+			if err != nil {
+				return err
+			}
+			index := iradix.NewWithData(keys, vals)
 			path := indexPath(tName, iName)
 			root, _, _ = root.Insert(path, index)
 		}
 	}
 	db.root = unsafe.Pointer(root)
-	txn := db.Txn(true)
-	for tName, data := range tableData {
-		err := txn.initializeWithData(tName, data)
-		if err != nil {
-			return err
-		}
-	}
-	txn.Commit()
 	return nil
 }
 

@@ -56,50 +56,50 @@ func Benchmark10TxnBulkInsert(b *testing.B) {
 	benchmarkTxnBulkInsert(b, 10)
 }
 
-func Benchmark100TxnInsert(b *testing.B) {
-	benchmarkTxnInsert(b, 100)
-}
-
-func Benchmark100TxnBulkInsert(b *testing.B) {
-	benchmarkTxnBulkInsert(b, 100)
-}
-
-func Benchmark1000TxnInsert(b *testing.B) {
-	benchmarkTxnInsert(b, 1000)
-}
-
-func Benchmark1000TxnBulkInsert(b *testing.B) {
-	benchmarkTxnBulkInsert(b, 1000)
-}
-
-func Benchmark10000TxnInsert(b *testing.B) {
-	benchmarkTxnInsert(b, 10000)
-}
-
-func Benchmark10000TxnBulkInsert(b *testing.B) {
-	benchmarkTxnBulkInsert(b, 10000)
-}
-
-func Benchmark100000TxnInsert(b *testing.B) {
-	benchmarkTxnInsert(b, 100000)
-}
-
-func Benchmark100000TxnBulkInsert(b *testing.B) {
-	benchmarkTxnBulkInsert(b, 100000)
-}
-
-func Benchmark1000000TxnInsert(b *testing.B) {
-	benchmarkTxnInsert(b, 1000000)
-}
-
-func Benchmark1000000TxnBulkInsert(b *testing.B) {
-	benchmarkTxnBulkInsert(b, 1000000)
-}
-
-func Benchmark10000000TxnInsert(b *testing.B) {
-	benchmarkTxnInsert(b, 10000000)
-}
-
-func Benchmark10000000TxnBulkInsert(b *testing.B) {
-	benchmarkTxnBulkInsert(b, 10000000)
-}
+//func Benchmark100TxnInsert(b *testing.B) {
+//	benchmarkTxnInsert(b, 100)
+//}
+//
+//func Benchmark100TxnBulkInsert(b *testing.B) {
+//	benchmarkTxnBulkInsert(b, 100)
+//}
+//
+//func Benchmark1000TxnInsert(b *testing.B) {
+//	benchmarkTxnInsert(b, 1000)
+//}
+//
+//func Benchmark1000TxnBulkInsert(b *testing.B) {
+//	benchmarkTxnBulkInsert(b, 1000)
+//}
+//
+//func Benchmark10000TxnInsert(b *testing.B) {
+//	benchmarkTxnInsert(b, 10000)
+//}
+//
+//func Benchmark10000TxnBulkInsert(b *testing.B) {
+//	benchmarkTxnBulkInsert(b, 10000)
+//}
+//
+//func Benchmark100000TxnInsert(b *testing.B) {
+//	benchmarkTxnInsert(b, 100000)
+//}
+//
+//func Benchmark100000TxnBulkInsert(b *testing.B) {
+//	benchmarkTxnBulkInsert(b, 100000)
+//}
+//
+//func Benchmark1000000TxnInsert(b *testing.B) {
+//	benchmarkTxnInsert(b, 1000000)
+//}
+//
+//func Benchmark1000000TxnBulkInsert(b *testing.B) {
+//	benchmarkTxnBulkInsert(b, 1000000)
+//}
+//
+//func Benchmark10000000TxnInsert(b *testing.B) {
+//	benchmarkTxnInsert(b, 10000000)
+//}
+//
+//func Benchmark10000000TxnBulkInsert(b *testing.B) {
+//	benchmarkTxnBulkInsert(b, 10000000)
+//}

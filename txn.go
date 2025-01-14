@@ -334,7 +334,7 @@ func (txn *Txn) initializeWithData(table string, objs []interface{}) error {
 
 		name := index
 		indexSchema := tableSchema.Indexes[index]
-		var vals [][]byte
+		var allVals [][]byte
 
 		// Get the primary ID of the object
 		indexTxn := txn.writableIndex(table, name)
@@ -358,8 +358,9 @@ func (txn *Txn) initializeWithData(table string, objs []interface{}) error {
 
 			// Determine the new index value
 			var (
-				ok  bool
-				err error
+				ok   bool
+				err  error
+				vals [][]byte
 			)
 			switch indexer := indexSchema.Indexer.(type) {
 			case SingleIndexer:
@@ -380,6 +381,10 @@ func (txn *Txn) initializeWithData(table string, objs []interface{}) error {
 				for i := range vals {
 					vals[i] = append(vals[i], idVal...)
 				}
+			}
+
+			for _, val := range vals {
+				allVals = append(allVals, val)
 			}
 
 			// Handle the update by deleting from the index first
@@ -440,7 +445,7 @@ func (txn *Txn) initializeWithData(table string, objs []interface{}) error {
 
 		radixKeys := make([][]byte, 0)
 		radixValues := make([]interface{}, 0)
-		for _, val := range vals {
+		for _, val := range allVals {
 			for _, obj := range objs {
 				radixKeys = append(radixKeys, val)
 				radixValues = append(radixValues, obj)
