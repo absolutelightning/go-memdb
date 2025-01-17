@@ -1,6 +1,6 @@
 module github.com/hashicorp/go-memdb
 
-go 1.23.3
+go 1.22.4
 
 toolchain go1.23.4
 
