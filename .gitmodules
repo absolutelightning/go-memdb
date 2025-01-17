@@ -1,4 +1,0 @@
-[submodule "go-immutable-radix"]
-	path = go-immutable-radix
-	url = https://github.com/absolutelightning/go-immutable-radix
-    branch = bulk-insert

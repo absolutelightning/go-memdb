@@ -4,7 +4,7 @@ go 1.22.4
 
 toolchain go1.23.4
 
-replace github.com/hashicorp/go-immutable-radix => ./go-immutable-radix
+replace github.com/hashicorp/go-immutable-radix => ../go-immutable-radix
 
 require github.com/hashicorp/go-immutable-radix v1.3.1
 
