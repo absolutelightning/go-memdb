@@ -133,65 +133,76 @@ func (db *MemDB) initialize() error {
 	return nil
 }
 
-func getTableData(db *MemDB, tName, index string, objs []interface{}) ([][]byte, []interface{}, error) {
-	// Get the table schema
+func getTableData(db *MemDB, tName, idxName string, objs []interface{}) ([][]byte, []interface{}, error) {
 	tableSchema, ok := db.schema.Tables[tName]
 	if !ok {
-		panic("table not found")
+		return nil, nil, fmt.Errorf("table not found: %s", tName)
+	}
+	idSchema, ok := tableSchema.Indexes[id]
+	if !ok {
+		return nil, nil, fmt.Errorf("primary index '%s' not found", id)
+	}
+	indexSchema, ok := tableSchema.Indexes[idxName]
+	if !ok {
+		return nil, nil, fmt.Errorf("index '%s' not found in table '%s'", idxName, tName)
 	}
 
-	idSchema := tableSchema.Indexes[id]
-	indexSchema := tableSchema.Indexes[index]
-	radixKeys := make([][]byte, 0)
-	radixValues := make([]interface{}, 0)
-	idIndexer := idSchema.Indexer.(SingleIndexer)
+	idIndexer, ok := idSchema.Indexer.(SingleIndexer)
+	if !ok {
+		return nil, nil, fmt.Errorf("primary index '%s' must be SingleIndexer", id)
+	}
+
+	// Pre-allocate with len(objs) capacity
+	radixKeys := make([][]byte, 0, len(objs))
+	radixValues := make([]interface{}, 0, len(objs))
+
 	for _, obj := range objs {
-		// Get the primary ID of the object
-		ok1, idVal, err1 := idIndexer.FromObject(obj)
-		if err1 != nil {
-			return nil, nil, fmt.Errorf("failed to build primary index: %v", err1)
+		// Get primary ID
+		ok1, idVal, err := idIndexer.FromObject(obj)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build primary index: %v", err)
 		}
 		if !ok1 {
 			return nil, nil, fmt.Errorf("object missing primary index")
 		}
 
-		// Determine the new index value
+		// Build index value(s)
 		var (
-			ok   bool
-			err  error
-			vals [][]byte
+			okVal bool
+			vals  [][]byte
 		)
+
 		switch indexer := indexSchema.Indexer.(type) {
 		case SingleIndexer:
 			var val []byte
-			ok, val, err = indexer.FromObject(obj)
+			okVal, val, err = indexer.FromObject(obj)
 			vals = [][]byte{val}
 		case MultiIndexer:
-			ok, vals, err = indexer.FromObject(obj)
-		}
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to build index '%s': %v", index, err)
+			okVal, vals, err = indexer.FromObject(obj)
+		default:
+			return nil, nil, fmt.Errorf("unknown indexer type for '%s'", idxName)
 		}
 
-		// Handle non-unique index by computing a unique index.
-		// This is done by appending the primary key which must
-		// be unique anyways.
-		if ok && !indexSchema.Unique {
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build index '%s': %v", idxName, err)
+		}
+
+		// For non-unique indexes, append the primary key
+		if okVal && !indexSchema.Unique {
 			for i := range vals {
 				vals[i] = append(vals[i], idVal...)
 			}
 		}
 
-		// If there is no index value, either this is an error or an expected
-		// case and we can skip updating
-		if !ok {
+		// If missing is allowed, skip object entirely
+		if !okVal {
 			if indexSchema.AllowMissing {
 				continue
-			} else {
-				return nil, nil, fmt.Errorf("missing value for index '%s'", index)
 			}
+			return nil, nil, fmt.Errorf("missing value for index '%s'", idxName)
 		}
 
+		// Collect
 		for _, val := range vals {
 			radixKeys = append(radixKeys, val)
 			radixValues = append(radixValues, obj)
@@ -204,18 +215,61 @@ func getTableData(db *MemDB, tName, index string, objs []interface{}) ([][]byte,
 // initialize with data is used to setup the DB for use after creation. This should
 // be called only once after allocating a MemDB.
 func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error {
-	root := db.getRoot()
-	for tName, _ := range tableData {
-		for iName := range db.schema.Tables[tName].Indexes {
-			keys, vals, err := getTableData(db, tName, iName, tableData[tName])
-			if err != nil {
-				return err
-			}
-			index := iradix.NewWithData(keys, vals)
-			path := indexPath(tName, iName)
-			root, _, _ = root.Insert(path, index)
+	// A struct to hold the results for each (table, index)
+	type indexResult struct {
+		path  string
+		index *iradix.Tree
+		err   error
+	}
+
+	results := make(chan indexResult)
+	var wg sync.WaitGroup
+
+	// Spawn a goroutine per (table, index) to build the partial index
+	for tName, objects := range tableData {
+		// Grab the table schema once
+		schema, ok := db.schema.Tables[tName]
+		if !ok {
+			// If a table is missing, immediately fail.
+			// You might prefer to push this into the channel
+			// so all other indexing can complete if desired.
+			return fmt.Errorf("table not found: %s", tName)
+		}
+
+		for iName := range schema.Indexes {
+			wg.Add(1)
+
+			go func(tableName, indexName string, objs []interface{}) {
+				defer wg.Done()
+
+				keys, vals, err := getTableData(db, tableName, indexName, objs)
+				if err != nil {
+					results <- indexResult{"", nil, err}
+					return
+				}
+
+				idx := iradix.NewWithData(keys, vals)
+				path := indexPath(tableName, indexName)
+				results <- indexResult{string(path), idx, nil}
+			}(tName, iName, objects)
 		}
 	}
+
+	// Close channel when all workers are done
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// Insert each partial index into the root, serially
+	root := db.getRoot()
+	for res := range results {
+		if res.err != nil {
+			return res.err
+		}
+		root, _, _ = root.Insert([]byte(res.path), res.index)
+	}
+
 	db.root = unsafe.Pointer(root)
 	return nil
 }
