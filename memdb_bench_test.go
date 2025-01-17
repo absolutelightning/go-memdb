@@ -23,6 +23,12 @@ func benchmarkTxnInsert(b *testing.B, batchSize int) {
 			if err := txn.Insert("main", objects[start+j]); err != nil {
 				b.Fatalf("insert failed: %v", err)
 			}
+			if err := txn.Insert("main1", objects[start+j]); err != nil {
+				b.Fatalf("insert failed: %v", err)
+			}
+			if err := txn.Insert("main2", objects[start+j]); err != nil {
+				b.Fatalf("insert failed: %v", err)
+			}
 		}
 		txn.Commit()
 	}
@@ -40,6 +46,8 @@ func benchmarkTxnBulkInsert(b *testing.B, batchSize int) {
 	for i := 0; i < b.N; i++ {
 		data := make(map[string][]interface{})
 		data["main"] = objects[i*batchSize : (i+1)*batchSize]
+		data["main1"] = objects[i*batchSize : (i+1)*batchSize]
+		data["main2"] = objects[i*batchSize : (i+1)*batchSize]
 		_, err := NewMemDBWithData(testValidSchema(), data)
 		if err != nil {
 			b.Fatalf("err: %v", err)
