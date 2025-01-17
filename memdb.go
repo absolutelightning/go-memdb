@@ -222,7 +222,7 @@ func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error
 		err   error
 	}
 
-	results := make(chan indexResult)
+	results := make(chan indexResult, 16)
 	var wg sync.WaitGroup
 
 	// Spawn a goroutine per (table, index) to build the partial index
