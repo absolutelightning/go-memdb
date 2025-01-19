@@ -214,7 +214,7 @@ func getTableData(db *MemDB, tName, idxName string, objs []interface{}) ([][]byt
 	return radixKeys, radixValues, nil
 }
 
-// initialize with data is used to setup the DB for use after creation. This should
+// initialize with data is used to set up the DB for use after creation. This should
 // be called only once after allocating a MemDB.
 func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error {
 	// A struct to hold the results for each (table, index)
