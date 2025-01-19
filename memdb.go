@@ -133,6 +133,8 @@ func (db *MemDB) initialize() error {
 	return nil
 }
 
+// getTableData is used to return the radix tree keys and values for a table and index
+// for all the objects provided. Mostly logic is derived from the transaction's insert method.
 func getTableData(db *MemDB, tName, idxName string, objs []interface{}) ([][]byte, []interface{}, error) {
 	tableSchema, ok := db.schema.Tables[tName]
 	if !ok {
