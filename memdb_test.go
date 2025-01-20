@@ -82,3 +82,29 @@ func TestMemDB_Snapshot(t *testing.T) {
 		t.Fatalf("should exist")
 	}
 }
+
+func TestNewMemDBWithData(t *testing.T) {
+	// Create a new memdb instance
+	// Benchmark the insert operation
+	objects := make([]interface{}, 100)
+	for i := 0; i < 100; i++ {
+		obj := testObjWithId(i)
+		objects[i] = obj
+	}
+	data := make(map[string][]interface{})
+	data["main"] = objects
+	db, err := NewMemDBWithData(testValidSchema(), data)
+	if err != nil {
+		t.Fatalf("error initialized memdb with data")
+	}
+	txn := db.Txn(false)
+	for _, obj := range objects {
+		res, err := txn.First("main", "id", obj.(*TestObject).ID)
+		if err != nil {
+			t.Fatalf("error")
+		}
+		if res == nil {
+			t.Fatalf("fatal")
+		}
+	}
+}

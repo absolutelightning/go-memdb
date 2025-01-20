@@ -6,6 +6,8 @@
 package memdb
 
 import (
+	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -98,6 +100,25 @@ func (db *MemDB) Snapshot() *MemDB {
 	return clone
 }
 
+// NewMemDB creates a new MemDB with the given schema.
+func NewMemDBWithData(schema *DBSchema, data map[string][]interface{}) (*MemDB, error) {
+	// Validate the schema
+	if err := schema.Validate(); err != nil {
+		return nil, err
+	}
+
+	// Create the MemDB
+	db := &MemDB{
+		schema:  schema,
+		root:    unsafe.Pointer(iradix.New()),
+		primary: true,
+	}
+	if err := db.initializeWithObjects(data); err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
 // initialize is used to setup the DB for use after creation. This should
 // be called only once after allocating a MemDB.
 func (db *MemDB) initialize() error {
@@ -109,6 +130,179 @@ func (db *MemDB) initialize() error {
 			root, _, _ = root.Insert(path, index)
 		}
 	}
+	db.root = unsafe.Pointer(root)
+	return nil
+}
+
+// getTableData is used to return the radix tree keys and values for a table and index
+// for all the objects provided. Mostly logic is derived from the transaction's insert method.
+func getTableData(db *MemDB, tName, idxName string, objs []interface{}) ([][]byte, []interface{}, error) {
+	tableSchema, ok := db.schema.Tables[tName]
+	if !ok {
+		return nil, nil, fmt.Errorf("table not found: %s", tName)
+	}
+	idSchema, ok := tableSchema.Indexes[id]
+	if !ok {
+		return nil, nil, fmt.Errorf("primary index '%s' not found", id)
+	}
+	indexSchema, ok := tableSchema.Indexes[idxName]
+	if !ok {
+		return nil, nil, fmt.Errorf("index '%s' not found in table '%s'", idxName, tName)
+	}
+
+	idIndexer, ok := idSchema.Indexer.(SingleIndexer)
+	if !ok {
+		return nil, nil, fmt.Errorf("primary index '%s' must be SingleIndexer", id)
+	}
+
+	// Pre-allocate with len(objs) capacity
+	radixKeys := make([][]byte, 0, len(objs))
+	radixValues := make([]interface{}, 0, len(objs))
+
+	for _, obj := range objs {
+		// Get primary ID
+		ok1, idVal, err := idIndexer.FromObject(obj)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build primary index: %v", err)
+		}
+		if !ok1 {
+			return nil, nil, fmt.Errorf("object missing primary index")
+		}
+
+		// Build index value(s)
+		var (
+			okVal bool
+			vals  [][]byte
+		)
+
+		switch indexer := indexSchema.Indexer.(type) {
+		case SingleIndexer:
+			var val []byte
+			okVal, val, err = indexer.FromObject(obj)
+			vals = [][]byte{val}
+		case MultiIndexer:
+			okVal, vals, err = indexer.FromObject(obj)
+		default:
+			return nil, nil, fmt.Errorf("unknown indexer type for '%s'", idxName)
+		}
+
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to build index '%s': %v", idxName, err)
+		}
+
+		// For non-unique indexes, append the primary key
+		if okVal && !indexSchema.Unique {
+			for i := range vals {
+				vals[i] = append(vals[i], idVal...)
+			}
+		}
+
+		// If missing is allowed, skip object entirely
+		if !okVal {
+			if indexSchema.AllowMissing {
+				continue
+			}
+			return nil, nil, fmt.Errorf("missing value for index '%s'", idxName)
+		}
+
+		// Collect
+		for _, val := range vals {
+			radixKeys = append(radixKeys, val)
+			radixValues = append(radixValues, obj)
+		}
+	}
+
+	return radixKeys, radixValues, nil
+}
+
+// initialize with data is used to set up the DB for use after creation. This should
+// be called only once after allocating a MemDB.
+func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error {
+	// indexTask is what each worker will process
+	type indexTask struct {
+		table     string
+		indexName string
+		objects   []interface{}
+	}
+
+	// indexResult is what each worker sends back after building an index
+	type indexResult struct {
+		path  string
+		index *iradix.Tree
+		err   error
+	}
+
+	// Channels
+	tasks := make(chan indexTask, 16) // buffered, so sending won't block immediately
+	results := make(chan indexResult, 16)
+
+	var wg sync.WaitGroup
+
+	// ---- 1) Spawn a fixed number of worker goroutines ----
+	// Use the number of CPU cores, or some fixed concurrency level.
+	workerCount := runtime.NumCPU() // or pick a constant, e.g. 8
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Each worker continually reads from tasks
+			for t := range tasks {
+				_, ok := db.schema.Tables[t.table]
+				if !ok {
+					// Send an error result
+					results <- indexResult{"", nil, fmt.Errorf("table not found: %s", t.table)}
+					continue
+				}
+
+				keys, vals, err := getTableData(db, t.table, t.indexName, t.objects)
+				if err != nil {
+					results <- indexResult{"", nil, err}
+					continue
+				}
+
+				idx := iradix.NewWithData(keys, vals)
+				path := indexPath(t.table, t.indexName)
+				results <- indexResult{string(path), idx, nil}
+			}
+		}()
+	}
+
+	// ---- 2) Push tasks into the tasks channel ----
+	for tName, objects := range tableData {
+		schema, ok := db.schema.Tables[tName]
+		if !ok {
+			// You can return early, or maybe log an error
+			// For this example, just return an error
+			return fmt.Errorf("table not found: %s", tName)
+		}
+
+		for iName := range schema.Indexes {
+			tasks <- indexTask{
+				table:     tName,
+				indexName: iName,
+				objects:   objects,
+			}
+		}
+	}
+
+	// No more tasks will be sent
+	close(tasks)
+
+	// ---- 3) Close the results channel when all workers are done ----
+	go func() {
+		wg.Wait()
+		close(results)
+	}()
+
+	// ---- 4) Receive and apply partial indexes in a single goroutine ----
+	root := db.getRoot()
+	for res := range results {
+		if res.err != nil {
+			return res.err
+		}
+		root, _, _ = root.Insert([]byte(res.path), res.index)
+	}
+
 	db.root = unsafe.Pointer(root)
 	return nil
 }
