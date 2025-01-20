@@ -7,6 +7,7 @@ package memdb
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -133,6 +134,8 @@ func (db *MemDB) initialize() error {
 	return nil
 }
 
+// getTableData is used to return the radix tree keys and values for a table and index
+// for all the objects provided. Mostly logic is derived from the transaction's insert method.
 func getTableData(db *MemDB, tName, idxName string, objs []interface{}) ([][]byte, []interface{}, error) {
 	tableSchema, ok := db.schema.Tables[tName]
 	if !ok {
@@ -212,56 +215,86 @@ func getTableData(db *MemDB, tName, idxName string, objs []interface{}) ([][]byt
 	return radixKeys, radixValues, nil
 }
 
-// initialize with data is used to setup the DB for use after creation. This should
+// initialize with data is used to set up the DB for use after creation. This should
 // be called only once after allocating a MemDB.
 func (db *MemDB) initializeWithObjects(tableData map[string][]interface{}) error {
-	// A struct to hold the results for each (table, index)
+	// indexTask is what each worker will process
+	type indexTask struct {
+		table     string
+		indexName string
+		objects   []interface{}
+	}
+
+	// indexResult is what each worker sends back after building an index
 	type indexResult struct {
 		path  string
 		index *iradix.Tree
 		err   error
 	}
 
+	// Channels
+	tasks := make(chan indexTask, 16) // buffered, so sending won't block immediately
 	results := make(chan indexResult, 16)
+
 	var wg sync.WaitGroup
 
-	// Spawn a goroutine per (table, index) to build the partial index
+	// ---- 1) Spawn a fixed number of worker goroutines ----
+	// Use the number of CPU cores, or some fixed concurrency level.
+	workerCount := runtime.NumCPU() // or pick a constant, e.g. 8
+	for i := 0; i < workerCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			// Each worker continually reads from tasks
+			for t := range tasks {
+				_, ok := db.schema.Tables[t.table]
+				if !ok {
+					// Send an error result
+					results <- indexResult{"", nil, fmt.Errorf("table not found: %s", t.table)}
+					continue
+				}
+
+				keys, vals, err := getTableData(db, t.table, t.indexName, t.objects)
+				if err != nil {
+					results <- indexResult{"", nil, err}
+					continue
+				}
+
+				idx := iradix.NewWithData(keys, vals)
+				path := indexPath(t.table, t.indexName)
+				results <- indexResult{string(path), idx, nil}
+			}
+		}()
+	}
+
+	// ---- 2) Push tasks into the tasks channel ----
 	for tName, objects := range tableData {
-		// Grab the table schema once
 		schema, ok := db.schema.Tables[tName]
 		if !ok {
-			// If a table is missing, immediately fail.
-			// You might prefer to push this into the channel
-			// so all other indexing can complete if desired.
+			// You can return early, or maybe log an error
+			// For this example, just return an error
 			return fmt.Errorf("table not found: %s", tName)
 		}
 
 		for iName := range schema.Indexes {
-			wg.Add(1)
-
-			go func(tableName, indexName string, objs []interface{}) {
-				defer wg.Done()
-
-				keys, vals, err := getTableData(db, tableName, indexName, objs)
-				if err != nil {
-					results <- indexResult{"", nil, err}
-					return
-				}
-
-				idx := iradix.NewWithData(keys, vals)
-				path := indexPath(tableName, indexName)
-				results <- indexResult{string(path), idx, nil}
-			}(tName, iName, objects)
+			tasks <- indexTask{
+				table:     tName,
+				indexName: iName,
+				objects:   objects,
+			}
 		}
 	}
 
-	// Close channel when all workers are done
+	// No more tasks will be sent
+	close(tasks)
+
+	// ---- 3) Close the results channel when all workers are done ----
 	go func() {
 		wg.Wait()
 		close(results)
 	}()
 
-	// Insert each partial index into the root, serially
+	// ---- 4) Receive and apply partial indexes in a single goroutine ----
 	root := db.getRoot()
 	for res := range results {
 		if res.err != nil {
