@@ -26,6 +26,42 @@ func testValidSchema() *DBSchema {
 					},
 				},
 			},
+			"main1": &TableSchema{
+				Name: "main1",
+				Indexes: map[string]*IndexSchema{
+					"id": &IndexSchema{
+						Name:    "id",
+						Unique:  true,
+						Indexer: &StringFieldIndex{Field: "ID"},
+					},
+					"foo": &IndexSchema{
+						Name:    "foo",
+						Indexer: &StringFieldIndex{Field: "Foo"},
+					},
+					"qux": &IndexSchema{
+						Name:    "qux",
+						Indexer: &StringSliceFieldIndex{Field: "Qux"},
+					},
+				},
+			},
+			"main2": &TableSchema{
+				Name: "main2",
+				Indexes: map[string]*IndexSchema{
+					"id": &IndexSchema{
+						Name:    "id",
+						Unique:  true,
+						Indexer: &StringFieldIndex{Field: "ID"},
+					},
+					"foo": &IndexSchema{
+						Name:    "foo",
+						Indexer: &StringFieldIndex{Field: "Foo"},
+					},
+					"qux": &IndexSchema{
+						Name:    "qux",
+						Indexer: &StringSliceFieldIndex{Field: "Qux"},
+					},
+				},
+			},
 		},
 	}
 }
